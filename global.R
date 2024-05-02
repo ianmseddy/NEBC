@@ -9,9 +9,8 @@ getOrUpdatePkg("Require", "0.3.1.9015")
 getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
 getOrUpdatePkg("LandR", "1.1.0.9079")
 
-library(SpaDES.project)
-# removed library(SpaDES.project) -- just cleaner, personal preference
-out <- setupProject(
+
+out <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
   name = "NEBC",
@@ -22,8 +21,11 @@ out <- setupProject(
                inputPath = file.path("inputs"),
                outputPath = file.path("outputs")
   ),
-  modules = c(
-    "ianmseddy/gmcsDataPrep@development"
+  modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
+                "PredictiveEcology/Biomass_borealDataPrep@lccFix", #for lcc mapped to dataYear
+                "PredictiveEcology/Biomass_speciesData@development",
+                "PredictiveEcology/fireSense_SpreadFit@lccFix",
+                "PredictiveEcology/canClimateData@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
@@ -36,27 +38,35 @@ out <- setupProject(
                     dataYear = 2011,
                     sppEquivCol = "LandR"),
     gmcsDataPrep = list(PSPdataTypes = c("BC", "AB", "NFI"),
-                        doPlotting = TRUE,
-                        growthModel = quote(nlme::lme(growth ~ logAge*(ATA + CMI) +
-                                                      logAge^2 *(ATA + CMI) + ATA*CMI,
-                                                      random = ~1 | OrigPlotID1,
-                                                      weights = varFunc(~plotSize^0.5 * periodLength),
-                                                      data = PSPmodelData))
-                        )
+                        doPlotting = TRUE
+                        ),
+    fireSense_SpreadFit = list(
+      # cores = rep("localhost", 30)
+      mode = "debug"
+    ),
+    fireSense_dataPrepFit = list(
+      spreadFueLClass = "madeupFuel"
+    )
   ),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
-  speciesOfConcern = c("Pice_mar", "Pice_gla", "Popu_tre",
-                       "Pinu_con", "Betu_pap", "Betu_pap",
-                       "Pice_eng"),
-  sppEquiv = LandR::sppEquivalencies_CA[LandR %in% speciesOfConcern,],
+  sppEquiv = makeSppEquiv(),
   studyArea = setupSAandRTM()$studyArea,
   rasterToMatch = setupSAandRTM()$rasterToMatch,
   studyAreaPSP = setupSAandRTM(ecoprovinceNum = c("14.1", "14.2", "14.3", "14.4"))$studyArea |>
     terra::aggregate() |>
-    terra::buffer(width = 5000),
+    terra::buffer(width = 10000),
   packages = "googledrive",
   require = c("PredictiveEcology/reproducible@modsForLargeArchives (HEAD)"),
   useGit = TRUE
 )
+
+out$params$gmcsDataPrep$growthModel <- quote(nlme::lme(growth ~ logAge*(ATA + CMI),
+                                                       random = ~1 | OrigPlotID1,
+                                                       weights = varFunc(~plotSize^0.5 * periodLength),
+                                                       data = PSPmodelData))
+out$params$gmcsDataPrep$nullGrowthModel <- quote(nlme::lme(growth ~ logAge,
+                                                           random = ~1 | OrigPlotID1,
+                                                           weights = varFunc(~plotSize^0.5 * periodLength),
+                                                           data = PSPmodelData))
 
 inSim <- do.call(SpaDES.core::simInitAndSpades, out)

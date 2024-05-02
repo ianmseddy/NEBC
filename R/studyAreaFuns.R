@@ -14,3 +14,12 @@ setupSAandRTM <- function(destinationPath = "inputs", ecoprovinceNum = "14.1") {
   ep <- terra::project(ep, RTM)
   return(list(rasterToMatch = RTM, studyArea = ep))
 }
+
+makeSppEquiv <- function() {
+  speciesOfConcern = c("Pice_mar", "Pice_gla", "Popu_tre",
+                       "Pinu_con", "Betu_pap", "Betu_pap",
+                       "Pice_eng")
+  sppEquiv = LandR::sppEquivalencies_CA[LandR %in% speciesOfConcern,]
+  sppEquiv$madeupFuel <- c("class3", "class3", "class2", "class4", "class3", "class2", "class3")
+  return(sppEquiv)
+}
