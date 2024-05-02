@@ -9,8 +9,9 @@ getOrUpdatePkg("Require", "0.3.1.9015")
 getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
 getOrUpdatePkg("LandR", "1.1.0.9079")
 
+library(SpaDES.project)
 # removed library(SpaDES.project) -- just cleaner, personal preference
-out <- SpaDES.project::setupProject(
+out <- setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
   name = "NEBC",
@@ -34,16 +35,25 @@ out <- SpaDES.project::setupProject(
     .globals = list(.studyAreaName = "NEBC",
                     dataYear = 2011,
                     sppEquivCol = "LandR"),
-    gmcsDataPrep = list(PSPdataTypes = c("BC", "AB", "NFI"))
+    gmcsDataPrep = list(PSPdataTypes = c("BC", "AB", "NFI"),
+                        doPlotting = TRUE,
+                        growthModel = quote(nlme::lme(growth ~ logAge*(ATA + CMI) +
+                                                      logAge^2 *(ATA + CMI) + ATA*CMI,
+                                                      random = ~1 | OrigPlotID1,
+                                                      weights = varFunc(~plotSize^0.5 * periodLength),
+                                                      data = PSPmodelData))
+                        )
   ),
-  functions = "ianmseddy/Edehzhie@main/R/setupFuns.R",
+  functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   speciesOfConcern = c("Pice_mar", "Pice_gla", "Popu_tre",
                        "Pinu_con", "Betu_pap", "Betu_pap",
                        "Pice_eng"),
   sppEquiv = LandR::sppEquivalencies_CA[LandR %in% speciesOfConcern,],
   studyArea = setupSAandRTM()$studyArea,
   rasterToMatch = setupSAandRTM()$rasterToMatch,
-  studyAreaPSP = setupSAandRTM(ecoprovinceNum = c("14.1", "14.2", "14.3", "14.4"))$studyArea,
+  studyAreaPSP = setupSAandRTM(ecoprovinceNum = c("14.1", "14.2", "14.3", "14.4"))$studyArea |>
+    terra::aggregate() |>
+    terra::buffer(width = 5000),
   packages = "googledrive",
   require = c("PredictiveEcology/reproducible@modsForLargeArchives (HEAD)"),
   useGit = TRUE

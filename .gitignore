@@ -2,3 +2,11 @@
 .Rprofile
 
 inputs/
+cache
+outputs
+.Rproj.user
+.Rhistory
+.Rdata
+.RData
+.secret
+.secrets
