@@ -45,13 +45,16 @@ out <- SpaDES.project::setupProject(
       mode = "debug"
     ),
     fireSense_dataPrepFit = list(
-      spreadFueLClass = "madeupFuel"
+      spreadFuelClass = "madeupFuel",
+      ignitionFuelClass = "madeupFuel"
     )
   ),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   sppEquiv = makeSppEquiv(),
   studyArea = setupSAandRTM()$studyArea,
   rasterToMatch = setupSAandRTM()$rasterToMatch,
+  studyAreaLarge = setupSAandRTM()$studyArea,
+  rasterToMatchLarge = setupSAandRTM()$rasterToMatch,
   studyAreaPSP = setupSAandRTM(ecoprovinceNum = c("14.1", "14.2", "14.3", "14.4"))$studyArea |>
     terra::aggregate() |>
     terra::buffer(width = 10000),
