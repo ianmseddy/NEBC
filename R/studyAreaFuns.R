@@ -18,13 +18,35 @@ setupSAandRTM <- function(destinationPath = "inputs", ecoprovinceNum = "14.1") {
   return(list(rasterToMatch = RTM, studyArea = ep))
 }
 
-makeSppEquiv <- function() {
-  speciesOfConcern = c("Pice_mar", "Pice_gla", "Popu_tre",
-                       "Pinu_con", "Betu_pap", "Pice_eng")
+makeSppEquiv <- function(ecoProvinceNum = "14.1") {
+
+  speciesOfConcern <- switch(ecoProvinceNum,
+                             "14.1" = {
+                               c("BlWhEngFir" = "Pice_mar",
+                                 "BlWhEngFir" = "Pice_gla",
+                                 "PopBir" = "Popu_tre",
+                                 "BlWhEngFir" = "Abie_las",
+                                 "LdgPine" = "Pinu_con",
+                                 "PopBir" = "Betu_pap",
+                                 "BlWhEngFir" = "Pice_eng")
+                             },
+                             "4.3" = {
+                               c("BlWhLar" = "Pice_mar",
+                                 "BlWhLar" = "Pice_gla",
+                                 "BlWhLar" = "Lari_lar",
+                                 "PopBir" = "Popu_tre",
+                                 "PopBir" = "Betu_pap",
+                                 "Pine" = "Pinu_con",
+                                 "Pine" = "Pinu_ban")
+                             }
+  )
+
   sppEquiv = LandR::sppEquivalencies_CA[LandR %in% speciesOfConcern,]
   sppEquiv <- sppEquiv[LANDIS_traits != "PINU.CON.CON",] #drop shore pine
   sppEquiv <- sppEquiv[order(sppEquiv$LandR)]
                         # Betu_pap,  Pice_eng, Pice_gla, Pice_mar, Pinu_con, Popu_tre
-  sppEquiv$madeupFuel <- c("class2", "class3", "class3", "class3", "class4", "class2")
+
+  fuels <- data.table(LandR = speciesOfConcern, fuel = names(speciesOfConcern))
+  sppEquiv <- fuels[sppEquiv, on = c("LandR")]
   return(sppEquiv)
 }

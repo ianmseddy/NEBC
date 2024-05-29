@@ -19,7 +19,8 @@ if (currentName == "Taiga") {
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
 }
 
-
+googledrive::drive_auth(token = readRDS("projectToken.rds"))
+print("authentication line ran")
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
@@ -32,7 +33,7 @@ inSim <- SpaDES.project::setupProject(
                outputPath = file.path("outputs")
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
-                "PredictiveEcology/Biomass_borealDataPrep@lccFix", #for lcc mapped to dataYear
+                "PredictiveEcology/Biomass_borealDataPrep@development", #for lcc mapped to dataYear
                 "PredictiveEcology/Biomass_speciesData@development",
                 "PredictiveEcology/fireSense_SpreadFit@lccFix",
                 "PredictiveEcology/canClimateData@development"
@@ -66,17 +67,18 @@ inSim <- SpaDES.project::setupProject(
         internalProcesses = 10,
         sizeGbEachProcess = 1),
       trace = 1, #cacheID_DE = "previous", Not a param?
-      mode = "fit", SNLL_FS_thresh = 5000,
+      mode = c("fit", "visualize"),
+      SNLL_FS_thresh = 2050,
       doObjFunAssertions = FALSE),
     fireSense_dataPrepFit = list(
-      spreadFuelClassCol = "madeupFuel",
-      spreadFuelClassCol = "madeupFuel"
+      spreadFuelClassCol = "fuel",
+      spreadFuelClassCol = "fuel"
     )
   ),
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
-  sppEquiv = makeSppEquiv(),
+  sppEquiv = makeSppEquiv(ecoProvinceNum = ecoProvince),
   studyArea = setupSAandRTM(ecoprovinceNum = ecoProvince)$studyArea,
   rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoProvince)$rasterToMatch,
   rasterToMatchLarge = setupSAandRTM(ecoprovinceNum = ecoProvince)$rasterToMatch,
@@ -104,15 +106,8 @@ inSim$climateVariables <- list(
   )
 )
 
-# out$params$gmcsDataPrep$growthModel <- quote(nlme::lme(growth ~ logAge*(ATA + CMI),
-#                                                        random = ~1 | OrigPlotID1,
-#                                                        weights = varFunc(~plotSize^0.5 * periodLength),
-#                                                        data = PSPmodelData))
-# out$params$gmcsDataPrep$nullGrowthModel <- quote(nlme::lme(growth ~ logAge,
-#                                                            random = ~1 | OrigPlotID1,
-#                                                            weights = varFunc(~plotSize^0.5 * periodLength),
-#                                                            data = PSPmodelData))
-googledrive::drive_auth("ianmseddy@gmail.com")
+
 outSim <- do.call(SpaDES.core::simInitAndSpades, inSim)
 
-saveSimList(outSim, paste0("outputs/outSim_", currentName, ".qs"))
+saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
+            outputs = FALSE, inputs = FALSE, cache = FALSE)
