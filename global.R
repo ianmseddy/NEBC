@@ -72,7 +72,8 @@ inSim <- SpaDES.project::setupProject(
       SNLL_FS_thresh = 2050,
       doObjFunAssertions = FALSE),
     fireSense_dataPrepFit = list(
-      spreadFuelClassCol = "fuel"
+      spreadFuelClassCol = "fuel",
+      ignitionFuelClassCol = "fuel"
     )
   ),
   climateVariablesForFire = list(ignition = "CMDsm",
