@@ -16,3 +16,6 @@
 [submodule "modules/canClimateData"]
 	path = modules/canClimateData
 	url = https://github.com/PredictiveEcology/canClimateData
+[submodule "modules/fireSense_IgnitionFit"]
+	path = modules/fireSense_IgnitionFit
+	url = https://github.com/PredictiveEcology/fireSense_IgnitionFit

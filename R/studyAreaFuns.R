@@ -6,7 +6,7 @@ setupSAandRTM <- function(destinationPath = "inputs", ecoprovinceNum = "14.1") {
                                  destinationPath = destinationPath,
                                  fun = "terra::vect")
   ep <- ep[ep$ECOPROVINC == ecoprovinceNum,]
-  RTM <- prepInputs(destinationPath = destinationPath,
+  RTM <- reproducible::prepInputs(destinationPath = destinationPath,
                     url = "https://drive.google.com/file/d/1g9jr0VrQxqxGjZ4ckF6ZkSMP-zuYzHQC/",
                     cropTo = ep, maskTo = ep,
                     filename2 = NULL,

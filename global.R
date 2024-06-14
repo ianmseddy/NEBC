@@ -7,8 +7,6 @@ getOrUpdatePkg <- function(p, minVer, repo) {
 
 getOrUpdatePkg("Require", "0.3.1.9015")
 getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
-getOrUpdatePkg("LandR", "1.1.0.9079")
-
 
 out <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
@@ -22,9 +20,10 @@ out <- SpaDES.project::setupProject(
                outputPath = file.path("outputs")
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
-                "PredictiveEcology/Biomass_borealDataPrep@lccFix", #for lcc mapped to dataYear
+                "PredictiveEcology/Biomass_borealDataPrep@development", #for lcc mapped to dataYear
                 "PredictiveEcology/Biomass_speciesData@development",
-                "PredictiveEcology/fireSense_SpreadFit@lccFix",
+                # "PredictiveEcology/fireSense_SpreadFit@lccFix",
+                "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
                 "PredictiveEcology/canClimateData@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
@@ -59,7 +58,6 @@ out <- SpaDES.project::setupProject(
     terra::aggregate() |>
     terra::buffer(width = 10000),
   packages = "googledrive",
-  require = c("PredictiveEcology/reproducible@modsForLargeArchives (HEAD)"),
   useGit = TRUE
 )
 
@@ -72,4 +70,4 @@ out$params$gmcsDataPrep$nullGrowthModel <- quote(nlme::lme(growth ~ logAge,
                                                            weights = varFunc(~plotSize^0.5 * periodLength),
                                                            data = PSPmodelData))
 
-inSim <- do.call(SpaDES.core::simInitAndSpades, out)
+outSim <- do.call(SpaDES.core::simInitAndSpades, out)
