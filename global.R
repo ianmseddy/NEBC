@@ -19,7 +19,10 @@ if (currentName == "Taiga") {
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
 }
 
-googledrive::drive_auth(token = readRDS("projectToken.rds"))
+if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
+  googledrive::drive_auth(token = readRDS("projectToken.rds"))
+}
+
 print("authentication line ran")
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
