@@ -19,14 +19,15 @@ if (currentName == "Taiga") {
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
 }
 
+
 if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
-  googledrive::drive_auth(token = readRDS("projectToken.rds"))
+  googledrive::drive_auth(token = readRDS("googlemagic.rds"))
 }
 
-print("authentication line ran")
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
+  useGit=  FALSE,
   name = "NEBC",
   paths = list(projectPath = "C:/Ian/Git/AssortedProjects/NEBC",
                modulePath = file.path("modules"),
@@ -36,11 +37,11 @@ inSim <- SpaDES.project::setupProject(
                outputPath = file.path("outputs")
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
-                "PredictiveEcology/Biomass_borealDataPrep@development", #for lcc mapped to dataYear
-                "PredictiveEcology/Biomass_speciesData@development",
-                # "PredictiveEcology/fireSense_SpreadFit@lccFix",
-                "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
-                "PredictiveEcology/canClimateData@development"
+              "PredictiveEcology/Biomass_borealDataPrep@development",
+              "PredictiveEcology/Biomass_speciesData@development",
+              "PredictiveEcology/fireSense_SpreadFit@lccFix",
+              # "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
+              "PredictiveEcology/canClimateData@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
@@ -48,41 +49,13 @@ inSim <- SpaDES.project::setupProject(
                  spades.recoveryMode = 1
   ),
   times = list(start = 2011, end = 2021),
-  params = list(
-    .globals = list(.studyAreaName = currentName,
-                    dataYear = 2011,
-                    sppEquivCol = "LandR"),
-    # gmcsDataPrep = list(PSPdataTypes = c("BC", "AB", "NFI"),
-    #                     doPlotting = TRUE
-    #                     ),
-    Biomass_borealDataPrep = list(
-      overrideAgeInFires = FALSE,
-      overrideBiomassinFires = FALSE
-    ),
-    fireSense_SpreadFit = list(
-      cores = pemisc::makeIpsForNetworkCluster(
-        ipStart = "10.20.0",
-        ipEnd = c(97, 189, 220, 184, 106),
-        availableCores = c(28, 28, 28, 14, 14),
-        availableRAM = c(500, 500, 500, 250, 250),
-        localHostEndIp = 97,
-        proc = "cores",
-        nProcess = 10,
-        internalProcesses = 10,
-        sizeGbEachProcess = 1),
-      trace = 1, #cacheID_DE = "previous", Not a param?
-      mode = c("fit", "visualize"),
-      SNLL_FS_thresh = 2050,
-      doObjFunAssertions = FALSE),
-    fireSense_dataPrepFit = list(
-      spreadFuelClassCol = "fuel",
-      ignitionFuelClassCol = "fuel"
-    )
-  ),
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
+  fireSense_ignitionFormula = paste0("ignitionsNoGT1 ~ (1|yearChar) + youngAge:CMDsm + nf_highFlam:CMDsm",
+                                     " + nf_lowFlam:CMDsm + BlWhLar:CMDsm + Pine:CMDsm + PopBir:CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   sppEquiv = makeSppEquiv(ecoProvinceNum = ecoProvince),
+  #update mutuallyExlcusive Cols
   studyArea = setupSAandRTM(ecoprovinceNum = ecoProvince)$studyArea,
   rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoProvince)$rasterToMatch,
   rasterToMatchLarge = setupSAandRTM(ecoprovinceNum = ecoProvince)$rasterToMatch,
@@ -90,10 +63,63 @@ inSim <- SpaDES.project::setupProject(
   studyAreaPSP = setupSAandRTM(ecoprovinceNum = studyAreaPSPprov)$studyArea |>
     terra::aggregate() |>
     terra::buffer(width = 10000),
-  packages = "googledrive",
-  useGit = TRUE
+  #params last because one of them depends on sppEquiv fuel class names
+  params = list(
+    .globals = list(.studyAreaName = currentName,
+                    dataYear = 2011,
+                    .plots = "png",
+                    sppEquivCol = "LandR"),
+    Biomass_borealDataPrep = list(
+      overrideAgeInFires = FALSE,
+      overrideBiomassInFires = FALSE
+    ),
+    canClimateData = list(
+      projectedClimateYears = 2011:2061
+    ),
+    fireSense_SpreadFit = list(
+      cores = pemisc::makeIpsForNetworkCluster(
+        ipStart = "10.20.0",
+        ipEnd = c(189, 213, 220, 217, 106),
+        availableCores = c(28, 28, 28, 14, 14),
+        availableRAM = c(500, 500, 500, 250, 250),
+        localHostEndIp = 189,
+        proc = "cores",
+        nProcess = 10,
+        internalProcesses = 10,
+        sizeGbEachProcess = 1),
+      mutuallyExclusiveCols = list(
+        youngAge = c("nf", unique(inSim$sppEquiv$fuel))),
+      trace = 1,
+      #cacheID_DE = "previous", Not a param?
+      mode = c("fit", "visualize"),
+      # mode = c("debug"),
+      SNLL_FS_thresh = 2100,
+      doObjFunAssertions = FALSE),
+    fireSense_dataPrepFit = list(
+      spreadFuelClassCol = "fuel",
+      ignitionFuelClassCol = "fuel"
+    ),
+    fireSense_IgnitionFit = list(
+      rescalers = c("CMDsm" = 1000)
+    )
+  )
 )
 
+inSim$params$fireSense_SpreadFit["mutuallyExclusiveCols"] = list(
+  "youngAge" = c("nf", unique(inSim$sppEquiv$fuel)))
+
+
+#correlation between MDC and CMDsm for ever pixel over time = 0.85
+#correlation of mean MDC and CMDsm in ever pixel is 0.97
+#correlation between annual ignitions and CMDsm is 0.37 for CMDsm and 0.28 for MDC
+#in general this is lower than other study areas (e.g., 0.48-0.52 in the Edehzie)
+#correlation with mean fire size is much higher
+#              MDC       CMDsm     igs          meanFireSize maxFireSize
+# MDC          1.0000000 0.9063241 0.2656245    0.5844934   0.5434765
+# CMDsm        0.9063241 1.0000000 0.3750653    0.6340060   0.6297804
+# igs          0.2656245 0.3750653 1.0000000    0.5000696   0.5744303
+# meanFireSize 0.5844934 0.6340060 0.5000696    1.0000000   0.9307312
+# maxFireSize  0.5434765 0.6297804 0.5744303    0.9307312   1.0000000
 
 #add this after because of the quoted functions
 inSim$climateVariables <- list(
@@ -105,12 +131,21 @@ inSim$climateVariables <- list(
   projected_CMDsm = list(
     vars = "future_CMD_sm",
     fun = quote(calcAsIs),
-    .dots = list(future_years = 2011:2100)
+    .dots = list(future_years = 2011:2061)
+  ),
+  historical_MDC = list(
+    vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
+    fun = quote(calcMDC),
+    .dots = list(historical_years = 1991:2022)
   )
 )
 
+# mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
+# saveRDS(mytoken, "googlemagic.rds")
+
+
 
 outSim <- do.call(SpaDES.core::simInitAndSpades, inSim)
-
+#
 saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
             outputs = FALSE, inputs = FALSE, cache = FALSE)
