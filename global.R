@@ -5,25 +5,24 @@ getOrUpdatePkg <- function(p, minVer, repo) {
   }
 }
 
-getOrUpdatePkg("Require", "0.3.1.9015")
 getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
 # getOrUpdatePkg("LandR", "1.1.1")
 
 currentName <- "Taiga"
 if (currentName == "Taiga") {
-  ecoProvince <- c("4.3")
+  ecoprovince <- c("4.3")
   studyAreaPSPprov <- c("4.3", "12.3", "14.1", "9.1") #this is a weird combination
 
 } else {
-  ecoProvince <- "14.1"
+  ecoprovince <- "14.1"
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
 }
-
 
 if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
   googledrive::drive_auth(token = readRDS("googlemagic.rds"))
 }
 
+#TODO change the script so that ecoprovinceNum is consistently named in functinos
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
@@ -54,12 +53,14 @@ inSim <- SpaDES.project::setupProject(
   fireSense_ignitionFormula = paste0("ignitionsNoGT1 ~ (1|yearChar) + youngAge:CMDsm + nf_highFlam:CMDsm",
                                      " + nf_lowFlam:CMDsm + BlWhLar:CMDsm + Pine:CMDsm + PopBir:CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
-  sppEquiv = makeSppEquiv(ecoProvinceNum = ecoProvince),
+  sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
   #update mutuallyExlcusive Cols
-  studyArea = setupSAandRTM(ecoprovinceNum = ecoProvince)$studyArea,
-  rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoProvince)$rasterToMatch,
-  rasterToMatchLarge = setupSAandRTM(ecoprovinceNum = ecoProvince)$rasterToMatch,
-  studyAreaLarge = setupSAandRTM(ecoprovinceNum = ecoProvince)$studyArea,
+  studyArea = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
+  rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
+  rasterToMatchLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
+  studyAreaLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
+  studyAreaReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyAreaReporting,
+  rasterToMatchReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatchReporting,
   studyAreaPSP = setupSAandRTM(ecoprovinceNum = studyAreaPSPprov)$studyArea |>
     terra::aggregate() |>
     terra::buffer(width = 10000),
@@ -87,9 +88,10 @@ inSim <- SpaDES.project::setupProject(
         nProcess = 10,
         internalProcesses = 10,
         sizeGbEachProcess = 1),
-      mutuallyExclusiveCols = list(
-        youngAge = c("nf", unique(inSim$sppEquiv$fuel))),
       trace = 1,
+      mutuallyExclusiveCols = list(
+        youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
+      ),
       #cacheID_DE = "previous", Not a param?
       mode = c("fit", "visualize"),
       # mode = c("debug"),
@@ -105,9 +107,28 @@ inSim <- SpaDES.project::setupProject(
   )
 )
 
-inSim$params$fireSense_SpreadFit["mutuallyExclusiveCols"] = list(
-  "youngAge" = c("nf", unique(inSim$sppEquiv$fuel)))
+#add this after because of the quoted functions
+inSim$climateVariables <- list(
+  historical_CMDsm = list(
+    vars = "historical_CMD_sm",
+    fun = quote(calcAsIs),
+    .dots = list(historical_years = 1991:2022)
+  ),
+  projected_CMDsm = list(
+    vars = "future_CMD_sm",
+    fun = quote(calcAsIs),
+    .dots = list(future_years = 2011:2061)
+  )
+)
 
+# mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
+# saveRDS(mytoken, "googlemagic.rds")
+
+pkgload::load_all("../fireSenseUtils")
+outSim <- do.call(SpaDES.core::simInitAndSpades, inSim)
+#
+saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
+            outputs = FALSE, inputs = FALSE, cache = FALSE)
 
 #correlation between MDC and CMDsm for ever pixel over time = 0.85
 #correlation of mean MDC and CMDsm in ever pixel is 0.97
@@ -120,32 +141,3 @@ inSim$params$fireSense_SpreadFit["mutuallyExclusiveCols"] = list(
 # igs          0.2656245 0.3750653 1.0000000    0.5000696   0.5744303
 # meanFireSize 0.5844934 0.6340060 0.5000696    1.0000000   0.9307312
 # maxFireSize  0.5434765 0.6297804 0.5744303    0.9307312   1.0000000
-
-#add this after because of the quoted functions
-inSim$climateVariables <- list(
-  historical_CMDsm = list(
-    vars = "historical_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(historical_years = 1991:2022)
-  ),
-  projected_CMDsm = list(
-    vars = "future_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(future_years = 2011:2061)
-  ),
-  historical_MDC = list(
-    vars = c(sprintf("historical_PPT%02d", 4:9), sprintf("historical_Tmax%02d", 4:9)),
-    fun = quote(calcMDC),
-    .dots = list(historical_years = 1991:2022)
-  )
-)
-
-# mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
-# saveRDS(mytoken, "googlemagic.rds")
-
-
-
-outSim <- do.call(SpaDES.core::simInitAndSpades, inSim)
-#
-saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
-            outputs = FALSE, inputs = FALSE, cache = FALSE)

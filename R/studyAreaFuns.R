@@ -1,26 +1,38 @@
 #produce study area and RTM
 setupSAandRTM <- function(destinationPath = "inputs", ecoprovinceNum = "14.1") {
+
+
+
   epUrl <- paste0("https://sis.agr.gc.ca/cansis/nsdb/ecostrat/",
                   "province/ecoprovince_shp.zip")
   ep <- reproducible::prepInputs(url =  epUrl,
                                  destinationPath = destinationPath,
                                  fun = "terra::vect")
   ep <- ep[ep$ECOPROVINC == ecoprovinceNum,]
+
+  SA <- terra::buffer(ep, 20000) #20 km buffer
+
   RTM <- reproducible::prepInputs(destinationPath = destinationPath,
                                   url = paste0("https://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/",
                                                "canada-forests-attributes_attributs-forests-canada/",
                                                "2001-attributes_attributs-2001/",
                                                "NFI_MODIS250m_2001_kNN_Structure_Stand_Age_v1.tif"),
-                    cropTo = ep, maskTo = ep,
-                    filename2 = NULL,
-                    method = c("near"), fun = "terra::rast")
-  ep <- terra::project(ep, RTM)
-  return(list(rasterToMatch = RTM, studyArea = ep))
+                                  cropTo = SA, maskTo = SA,
+                                  writeTo = NULL,
+                                  method = c("near"), fun = "terra::rast")
+  SA <- terra::project(SA, RTM)
+
+  RTMreporting <- reproducible::postProcess(RTM, maskTo = ep, cropTo = ep, writeTo = NULL)
+  ep <- terra::project(ep, RTMreporting)
+
+  return(list(rasterToMatch = RTM, studyArea = SA,
+              rasterToMatchReporting = RTMreporting,
+              studyAreaReporting = ep))
 }
 
-makeSppEquiv <- function(ecoProvinceNum = "14.1") {
+makeSppEquiv <- function(ecoprovinceNum = "14.1") {
 
-  speciesOfConcern <- switch(ecoProvinceNum,
+  speciesOfConcern <- switch(ecoprovinceNum,
                              "14.1" = {
                                c("BlWhEngFir" = "Pice_mar",
                                  "BlWhEngFir" = "Pice_gla",
