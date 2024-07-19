@@ -72,12 +72,17 @@ inSim <- SpaDES.project::setupProject(
                     sppEquivCol = "LandR"),
     Biomass_borealDataPrep = list(
       overrideAgeInFires = FALSE,
-      overrideBiomassInFires = FALSE
+      overrideBiomassInFires = FALSE,
+      .useCache = c(".inputObjects", "init")
     ),
     canClimateData = list(
       projectedClimateYears = 2011:2061
     ),
     fireSense_SpreadFit = list(
+      # mutuallyExclusiveCols = list(
+      #   youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
+      # ),
+      #cacheID_DE = "previous", Not a param?
       cores = pemisc::makeIpsForNetworkCluster(
         ipStart = "10.20.0",
         ipEnd = c(189, 213, 220, 217, 106),
@@ -89,14 +94,11 @@ inSim <- SpaDES.project::setupProject(
         internalProcesses = 10,
         sizeGbEachProcess = 1),
       trace = 1,
-      mutuallyExclusiveCols = list(
-        youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
-      ),
-      #cacheID_DE = "previous", Not a param?
       mode = c("fit", "visualize"),
       # mode = c("debug"),
       SNLL_FS_thresh = 2100,
-      doObjFunAssertions = FALSE),
+      doObjFunAssertions = FALSE
+    ),
     fireSense_dataPrepFit = list(
       spreadFuelClassCol = "fuel",
       ignitionFuelClassCol = "fuel"
@@ -123,10 +125,12 @@ inSim$climateVariables <- list(
 
 # mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
 # saveRDS(mytoken, "googlemagic.rds")
+inSim$params$fireSense_SpreadFit$mutuallyExclusiveCols = list(
+  youngAge = c("nf", unique(inSim$sppEquiv$fuel))
+)
 
-pkgload::load_all("../fireSenseUtils")
-outSim <- do.call(SpaDES.core::simInitAndSpades, inSim)
-#
+outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
+
 saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
             outputs = FALSE, inputs = FALSE, cache = FALSE)
 

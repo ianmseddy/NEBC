@@ -1,8 +1,6 @@
 #produce study area and RTM
 setupSAandRTM <- function(destinationPath = "inputs", ecoprovinceNum = "14.1") {
 
-
-
   epUrl <- paste0("https://sis.agr.gc.ca/cansis/nsdb/ecostrat/",
                   "province/ecoprovince_shp.zip")
   ep <- reproducible::prepInputs(url =  epUrl,
