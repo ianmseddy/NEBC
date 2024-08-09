@@ -8,18 +8,25 @@ getOrUpdatePkg <- function(p, minVer, repo) {
 getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
 # getOrUpdatePkg("LandR", "1.1.1")
 
-currentName <- "Taiga"
+currentName <- "Skeena" #figure out what this other one is
 if (currentName == "Taiga") {
   ecoprovince <- c("4.3")
   studyAreaPSPprov <- c("4.3", "12.3", "14.1", "9.1") #this is a weird combination
-
+  snll_thresh = 2100
 } else {
   ecoprovince <- "14.1"
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
+  snll_thresh = 1200 #figure this out
+  warning('what is this')
 }
 
 if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
-  googledrive::drive_auth(token = readRDS("googlemagic.rds"))
+  #this must be run in advance at some point -
+  # I don't know how to control the token expiry - gargle documentation is crappy
+  # mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
+  # saveRDS(mytoken, "googlemagic.rds")
+  googledrive::drive_auth(email = "ianmseddy@gmail.com",
+                          token = readRDS("googlemagic.rds"))
 }
 
 #TODO change the script so that ecoprovinceNum is consistently named in functinos
@@ -39,7 +46,7 @@ inSim <- SpaDES.project::setupProject(
               "PredictiveEcology/Biomass_borealDataPrep@development",
               "PredictiveEcology/Biomass_speciesData@development",
               "PredictiveEcology/fireSense_SpreadFit@lccFix",
-              # "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
+              "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
               "PredictiveEcology/canClimateData@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
@@ -50,8 +57,6 @@ inSim <- SpaDES.project::setupProject(
   times = list(start = 2011, end = 2021),
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
-  fireSense_ignitionFormula = paste0("ignitionsNoGT1 ~ (1|yearChar) + youngAge:CMDsm + nf_highFlam:CMDsm",
-                                     " + nf_lowFlam:CMDsm + BlWhLar:CMDsm + Pine:CMDsm + PopBir:CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
   #update mutuallyExlcusive Cols
@@ -64,6 +69,12 @@ inSim <- SpaDES.project::setupProject(
   studyAreaPSP = setupSAandRTM(ecoprovinceNum = studyAreaPSPprov)$studyArea |>
     terra::aggregate() |>
     terra::buffer(width = 10000),
+  nonForestedLCCGroups = list(
+    "nf_dryland" = c(50, 100, 40), # shrub, herbaceous, bryoid
+    "nf_wetland" = c(81)), #non-treed wetland.
+  fireSense_ignitionFormula = paste0("ignitionsNoGT1 ~ (1|yearChar) + youngAge:CMDsm + nf_wetland:CMDsm",
+                                     " + nf_dryland:CMDsm + ", paste0(unique(sppEquiv$fuel), ":CMDsm",
+                                                                      collapse = " + ")),
   #params last because one of them depends on sppEquiv fuel class names
   params = list(
     .globals = list(.studyAreaName = currentName,
@@ -79,9 +90,9 @@ inSim <- SpaDES.project::setupProject(
       projectedClimateYears = 2011:2061
     ),
     fireSense_SpreadFit = list(
-      # mutuallyExclusiveCols = list(
-      #   youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
-      # ),
+      mutuallyExclusiveCols = list(
+        youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
+      ),
       #cacheID_DE = "previous", Not a param?
       cores = pemisc::makeIpsForNetworkCluster(
         ipStart = "10.20.0",
@@ -96,12 +107,13 @@ inSim <- SpaDES.project::setupProject(
       trace = 1,
       mode = c("fit", "visualize"),
       # mode = c("debug"),
-      SNLL_FS_thresh = 2100,
+      SNLL_FS_thresh = snll_thresh,
       doObjFunAssertions = FALSE
     ),
     fireSense_dataPrepFit = list(
       spreadFuelClassCol = "fuel",
-      ignitionFuelClassCol = "fuel"
+      ignitionFuelClassCol = "fuel",
+      missingLCCgroup = c("nf_dryland")
     ),
     fireSense_IgnitionFit = list(
       rescalers = c("CMDsm" = 1000)
@@ -125,15 +137,12 @@ inSim$climateVariables <- list(
 
 # mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
 # saveRDS(mytoken, "googlemagic.rds")
-inSim$params$fireSense_SpreadFit$mutuallyExclusiveCols = list(
-  youngAge = c("nf", unique(inSim$sppEquiv$fuel))
-)
-
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
 saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
             outputs = FALSE, inputs = FALSE, cache = FALSE)
 
+# Taiga
 #correlation between MDC and CMDsm for ever pixel over time = 0.85
 #correlation of mean MDC and CMDsm in ever pixel is 0.97
 #correlation between annual ignitions and CMDsm is 0.37 for CMDsm and 0.28 for MDC

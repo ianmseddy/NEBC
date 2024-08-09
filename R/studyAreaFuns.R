@@ -41,11 +41,11 @@ makeSppEquiv <- function(ecoprovinceNum = "14.1") {
                                  "BlWhEngFir" = "Pice_eng")
                              },
                              "4.3" = {
-                               c("BlWhLar" = "Pice_mar",
-                                 "BlWhLar" = "Pice_gla",
-                                 "BlWhLar" = "Lari_lar",
-                                 "PopBir" = "Popu_tre",
-                                 "PopBir" = "Betu_pap",
+                               c("BlSpruce" = "Pice_mar",
+                                 "WhLaBiPo" = "Pice_gla",
+                                 "WhLaBiPo" = "Lari_lar",
+                                 "WhLaBiPo" = "Popu_tre",
+                                 "WhLaBiPo" = "Betu_pap",
                                  "Pine" = "Pinu_con",
                                  "Pine" = "Pinu_ban")
                              }
