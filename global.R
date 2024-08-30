@@ -8,7 +8,7 @@ getOrUpdatePkg <- function(p, minVer, repo) {
 getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
 # getOrUpdatePkg("LandR", "1.1.1")
 
-currentName <- "Skeena" #figure out what this other one is
+currentName <- "Skeena" #toggle between Skeena and Taiga
 if (currentName == "Taiga") {
   ecoprovince <- c("4.3")
   studyAreaPSPprov <- c("4.3", "12.3", "14.1", "9.1") #this is a weird combination
@@ -16,8 +16,7 @@ if (currentName == "Taiga") {
 } else {
   ecoprovince <- "14.1"
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
-  snll_thresh = 1200 #figure this out
-  warning('what is this')
+  snll_thresh = 1200
 }
 
 if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
@@ -40,7 +39,7 @@ inSim <- SpaDES.project::setupProject(
                cachePath = file.path("cache"),
                scratchPath = tempdir(),
                inputPath = file.path("inputs"),
-               outputPath = file.path("outputs")
+               outputPath = file.path("outputs", currentName)
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
               "PredictiveEcology/Biomass_borealDataPrep@development",
@@ -137,6 +136,13 @@ inSim$climateVariables <- list(
 
 # mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
 # saveRDS(mytoken, "googlemagic.rds")
+
+#known bugs/undesirable behavior
+#1 spreadFit dumps a bunch of figs in the project directory instead of outputs
+#2 must rm completed simLists before rerunning - or Overwrite = TRUE isn't respected w/ terra
+#3 canClimateData mysteriously fails...sometimes
+#4 Google Auth can be irritating when running via Bash
+
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
 saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
