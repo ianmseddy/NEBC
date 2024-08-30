@@ -126,11 +126,6 @@ inSim$climateVariables <- list(
     vars = "historical_CMD_sm",
     fun = quote(calcAsIs),
     .dots = list(historical_years = 1991:2022)
-  ),
-  projected_CMDsm = list(
-    vars = "future_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(future_years = 2011:2061)
   )
 )
 
