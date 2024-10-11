@@ -1,3 +1,4 @@
+
 #global_predict#
 #for now we will pass objects to BCore. Ideally we just run it
 
@@ -33,7 +34,7 @@ if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
                           token = readRDS("googlemagic.rds"))
 }
 
-#TODO change the script so that ecoprovinceNum is consistently named in functinos
+#TODO change the script so that ecoprovinceNum is consistently named in functions
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
@@ -47,6 +48,8 @@ inSim <- SpaDES.project::setupProject(
                outputPath = file.path("outputs", currentName)
   ),
   modules = c("PredictiveEcology/Biomass_core@development",
+              "PredictiveEcology/Biomass_borealDataPrep@development",
+              "PredictiveEcology/Biomass_speciesData@development",
               "PredictiveEcology/fireSense_dataPrepPredict@development",
               "PredictiveEcology/fireSense_SpreadPredict@development",
               "PredictiveEcology/fireSense_IgnitionPredict@development",
@@ -62,22 +65,10 @@ inSim <- SpaDES.project::setupProject(
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
-  #update mutuallyExlcusive Cols
   studyArea = inSim_Fit$studyArea,
   rasterToMatch = inSim_Fit$rasterToMatch,
-  species = inSim_Fit$species,
-  speciesEcoregion = inSim_Fit$speciesEcoregion,
-  sufficientLight = inSim_Fit$sufficientLight,
-  minRelativeB = inSim_Fit$minRelativeB,
-  covMinmax_spread = inSim_Fit$covMinMax_spread,
-  landcoverDT = inSim_Fit$landcoverDT2011,
-  pixelGroupMap = inSim_Fit$pixelGroupMap2011,
-  cohortData = inSim_Fit$cohortData2011,
-  biomassMap = inSim_Fit$biomassMap,
   projectedClimateRasters = inSim_Fit$projectedClimateRasters,
   climateVariablesForFire = inSim_Fit$climateVariablesForFire,
-  ecoregion = inSim_Fit$ecoregion,
-  ecoregionMap = inSim_Fit$ecoregionMap,
   nonForestedLCCGroups = list(
     "nf_dryland" = c(50, 100, 40), # shrub, herbaceous, bryoid
     "nf_wetland" = c(81)), #non-treed wetland.
