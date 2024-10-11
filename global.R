@@ -92,7 +92,6 @@ inSim <- SpaDES.project::setupProject(
       mutuallyExclusiveCols = list(
         youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
       ),
-      #cacheID_DE = "previous", Not a param?
       cores = pemisc::makeIpsForNetworkCluster(
         ipStart = "10.20.0",
         ipEnd = c(189, 213, 220, 217, 106),
@@ -134,19 +133,18 @@ inSim$climateVariables <- list(
   )
 )
 
-# mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
-# saveRDS(mytoken, "googlemagic.rds")
 
 #known bugs/undesirable behavior
 #1 spreadFit dumps a bunch of figs in the project directory instead of outputs
-#2 must rm completed simLists before rerunning - or Overwrite = TRUE isn't respected w/ terra
-#3 canClimateData mysteriously fails...sometimes
-#4 Google Auth can be irritating when running via Bash
+#2 canClimateData occasionally fails, rather mysteriously. Unclear if
+#3 Google Auth can be irritating when running via Bash
 
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
 saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
             outputs = FALSE, inputs = FALSE, cache = FALSE)
+
+
 
 # Taiga
 #correlation between MDC and CMDsm for ever pixel over time = 0.85
