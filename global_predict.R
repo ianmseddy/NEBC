@@ -20,7 +20,6 @@ if (currentName == "Taiga") {
 } else {
   ecoprovince <- "14.1"
   #this is the the outputs of the fitted simList- need better system
-  inSim_Fit <- readRDS("outputs/Skeena/outSim_Skeena/outputs/outSim_Skeena.rds")
   studyAreaPSPprov <- c("14.1", "14.2", "14.3", "14.4")
   snll_thresh = 1200
 }
@@ -50,10 +49,11 @@ inSim <- SpaDES.project::setupProject(
   modules = c("PredictiveEcology/Biomass_core@development",
               "PredictiveEcology/Biomass_borealDataPrep@development",
               "PredictiveEcology/Biomass_speciesData@development",
-              "PredictiveEcology/fireSense_dataPrepPredict@development",
-              "PredictiveEcology/fireSense_SpreadPredict@development",
-              "PredictiveEcology/fireSense_IgnitionPredict@development",
-              "PredictiveEcology/canClimateData@development"
+              # "PredictiveEcology/fireSense_dataPrepPredict@development",
+              # "PredictiveEcology/fireSense_SpreadPredict@development",
+              # "PredictiveEcology/fireSense_IgnitionPredict@development",
+              "PredictiveEcology/canClimateData@development",
+              "PredictiveEcology/fireSense@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
@@ -65,23 +65,39 @@ inSim <- SpaDES.project::setupProject(
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
-  studyArea = inSim_Fit$studyArea,
-  rasterToMatch = inSim_Fit$rasterToMatch,
-  projectedClimateRasters = inSim_Fit$projectedClimateRasters,
-  climateVariablesForFire = inSim_Fit$climateVariablesForFire,
+  studyArea = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
+  rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
+  rasterToMatchLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
+  studyAreaLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
+  studyAreaReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyAreaReporting,
+  rasterToMatchReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatchReporting,
+  climateVariablesForFire = list(ignition = "CMDsm",
+                                 spread = "CMDsm"),
   nonForestedLCCGroups = list(
     "nf_dryland" = c(50, 100, 40), # shrub, herbaceous, bryoid
     "nf_wetland" = c(81)), #non-treed wetland.
+  fireSense_IgnitionFitted = readRDS("outputs/Skeena/fireSense_IgnitionFitted.rds"),
+  fireSense_SpreadFitted = readRDS("outputs/Skeena/fireSense_SpreadFitted.rds"),
+
   #params last because one of them depends on sppEquiv fuel class names
   params = list(
     .globals = list(.studyAreaName = currentName,
                     dataYear = 2011,
                     .plots = "png",
-                    sppEquivCol = "LandR")
+                    sppEquivCol = "LandR"),
+    canClimateData = list(
+      projectedClimateYears = 2011:2061
+    )
   )
 )
 
-rm(inSim_Fit)
+inSim$climateVariables <- list(
+  projected_CMIsm = list(
+    vars = "future_CMD_sm",
+    fun = quote(calcAsIs),
+    .dots = list(future_years = inSim$params$canClimateData$projectedClimateYears)
+  )
+)
 
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 

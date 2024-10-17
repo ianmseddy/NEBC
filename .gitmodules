@@ -31,3 +31,6 @@
 [submodule "modules/fireSense_IgnitionPredict"]
 	path = modules/fireSense_IgnitionPredict
 	url = https://github.com/PredictiveEcology/fireSense_IgnitionPredict
+[submodule "modules/fireSense"]
+	path = modules/fireSense
+	url = https://github.com/PredictiveEcology/fireSense
