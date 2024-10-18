@@ -54,7 +54,7 @@ inSim <- SpaDES.project::setupProject(
     #climate inputs
     "PredictiveEcology/canClimateData@development",
     # fireSense prediction
-    "PredictiveEcology/fireSense_dataPrepPredict@pendingNewClimate",
+    "PredictiveEcology/fireSense_dataPrepPredict@pendingClimateData",
     "PredictiveEcology/fireSense_SpreadPredict@development",
     "PredictiveEcology/fireSense_IgnitionPredict@development",
     "PredictiveEcology/fireSense@development"
@@ -66,6 +66,7 @@ inSim <- SpaDES.project::setupProject(
                  parallelly.availableCores.custom = function(){return(6)} #For Windows users
   ),
   times = list(start = 2011, end = 2051),
+  ####objects####
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
@@ -81,9 +82,13 @@ inSim <- SpaDES.project::setupProject(
   nonForestedLCCGroups = list(
     "nf_dryland" = c(50, 100, 40), # shrub, herbaceous, bryoid
     "nf_wetland" = c(81)), #non-treed wetland.
+  #objects that must be supplied by fitted sim
   fireSense_IgnitionFitted = readRDS("outputs/Skeena/fireSense_IgnitionFitted.rds"),
   fireSense_SpreadFitted = readRDS("outputs/Skeena/fireSense_SpreadFitted.rds"),
-
+  #objects that could be supplied by fitted sim
+  flammableRTM = readRaster("outputs/Skeena/flammableRTM2011.tif"),
+  landcoverDT = fread("outputs/Skeena/landcoverDT2011.csv"),
+  ####Params####
   #params last because one of them depends on sppEquiv fuel class names
   params = list(
     .globals = list(.studyAreaName = currentName,
