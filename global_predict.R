@@ -46,21 +46,26 @@ inSim <- SpaDES.project::setupProject(
                inputPath = file.path("inputs"),
                outputPath = file.path("outputs", currentName)
   ),
-  modules = c("PredictiveEcology/Biomass_core@development",
-              "PredictiveEcology/Biomass_borealDataPrep@development",
-              "PredictiveEcology/Biomass_speciesData@development",
-              # "PredictiveEcology/fireSense_dataPrepPredict@development",
-              # "PredictiveEcology/fireSense_SpreadPredict@development",
-              # "PredictiveEcology/fireSense_IgnitionPredict@development",
-              "PredictiveEcology/canClimateData@development",
-              "PredictiveEcology/fireSense@development"
+  modules = c(
+    #biomass inputs
+    "PredictiveEcology/Biomass_core@development",
+    "PredictiveEcology/Biomass_borealDataPrep@development",
+    "PredictiveEcology/Biomass_speciesData@development",
+    #climate inputs
+    "PredictiveEcology/canClimateData@development",
+    # fireSense prediction
+    "PredictiveEcology/fireSense_dataPrepPredict@pendingNewClimate",
+    "PredictiveEcology/fireSense_SpreadPredict@development",
+    "PredictiveEcology/fireSense_IgnitionPredict@development",
+    "PredictiveEcology/fireSense@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
                  reproducible.shapefileRead = "terra::vect",
-                 spades.recoveryMode = 1
+                 spades.recoveryMode = 1,
+                 parallelly.availableCores.custom = function(){return(6)} #For Windows users
   ),
-  times = list(start = 2011, end = 2021),
+  times = list(start = 2011, end = 2051),
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
@@ -101,7 +106,7 @@ inSim$climateVariables <- list(
 
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
-saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
-            outputs = FALSE, inputs = FALSE, cache = FALSE)
+# saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
+#             outputs = FALSE, inputs = FALSE, cache = FALSE)
 
 
