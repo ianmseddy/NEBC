@@ -56,7 +56,7 @@ makeSppEquiv <- function(ecoprovinceNum = "14.1") {
   sppEquiv <- sppEquiv[order(sppEquiv$LandR)]
                         # Betu_pap,  Pice_eng, Pice_gla, Pice_mar, Pinu_con, Popu_tre
 
-  fuels <- data.table(LandR = speciesOfConcern, fuel = names(speciesOfConcern))
+  fuels <- data.table::data.table(LandR = speciesOfConcern, fuel = names(speciesOfConcern))
   sppEquiv <- fuels[sppEquiv, on = c("LandR")]
   return(sppEquiv)
 }

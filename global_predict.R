@@ -66,10 +66,8 @@ inSim <- SpaDES.project::setupProject(
                  parallelly.availableCores.custom = function(){return(6)} #For Windows users
   ),
   times = list(start = 2011, end = 2051),
-  ####objects####
-  climateVariablesForFire = list(ignition = "CMDsm",
-                                 spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
+  ###objects####
   sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
   studyArea = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
   rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
@@ -86,8 +84,8 @@ inSim <- SpaDES.project::setupProject(
   fireSense_IgnitionFitted = readRDS("outputs/Skeena/fireSense_IgnitionFitted.rds"),
   fireSense_SpreadFitted = readRDS("outputs/Skeena/fireSense_SpreadFitted.rds"),
   #objects that could be supplied by fitted sim
-  flammableRTM = readRaster("outputs/Skeena/flammableRTM2011.tif"),
-  landcoverDT = fread("outputs/Skeena/landcoverDT2011.csv"),
+  flammableRTM = terra::rast("outputs/Skeena/flammableRTM2011.tif"),
+  landcoverDT = data.table::fread("outputs/Skeena/landcoverDT2011.csv"),
   ####Params####
   #params last because one of them depends on sppEquiv fuel class names
   params = list(
@@ -97,12 +95,16 @@ inSim <- SpaDES.project::setupProject(
                     sppEquivCol = "LandR"),
     canClimateData = list(
       projectedClimateYears = 2011:2061
+    ),
+    dataPrepPredict = list(
+      ignitionFuelClassCol ="fuel",
+      spreadFuelClassCol = "fuel"
     )
   )
 )
 
 inSim$climateVariables <- list(
-  projected_CMIsm = list(
+  projected_CMDsm = list(
     vars = "future_CMD_sm",
     fun = quote(calcAsIs),
     .dots = list(future_years = inSim$params$canClimateData$projectedClimateYears)
