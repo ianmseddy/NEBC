@@ -96,9 +96,10 @@ inSim <- SpaDES.project::setupProject(
     canClimateData = list(
       projectedClimateYears = 2011:2061
     ),
-    dataPrepPredict = list(
+    fireSense_dataPrepPredict = list(
       ignitionFuelClassCol ="fuel",
-      spreadFuelClassCol = "fuel"
+      spreadFuelClassCol = "fuel",
+      missingLCC = "nf_dryland"
     )
   )
 )
