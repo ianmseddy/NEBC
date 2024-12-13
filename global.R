@@ -1,12 +1,10 @@
-getOrUpdatePkg <- function(p, minVer, repo) {
-  if (!isFALSE(try(packageVersion(p) < minVer, silent = TRUE) )) {
-    if (missing(repo)) repo = c("predictiveecology.r-universe.dev", getOption("repos"))
-    install.packages(p, repos = repo)
-  }
+
+repos <- c("predictiveecology.r-universe.dev", getOption("repos"))
+# Need the latest version
+if (tryCatch(packageVersion("SpaDES.project") < "0.1.1", error = function(x) TRUE)) {
+  install.packages(c("SpaDES.project", "Require"), repos = repos)
 }
 
-getOrUpdatePkg("SpaDES.project", "0.0.8.9040")
-# getOrUpdatePkg("LandR", "1.1.1")
 
 currentName <- "Skeena" #toggle between Skeena and Taiga
 if (currentName == "Taiga") {
@@ -32,8 +30,7 @@ if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
-  useGit=  FALSE,
-  name = "NEBC",
+  useGit=  TRUE,
   paths = list(projectPath = "C:/Ian/Git/AssortedProjects/NEBC",
                modulePath = file.path("modules"),
                cachePath = file.path("cache"),
@@ -42,10 +39,13 @@ inSim <- SpaDES.project::setupProject(
                outputPath = file.path("outputs", currentName)
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
+              "PredictiveEcology/fireSense_dataPrepPredict",
               "PredictiveEcology/Biomass_borealDataPrep@development",
+              "PredictiveEcology/Biomass_core@development",
               "PredictiveEcology/Biomass_speciesData@development",
-              "PredictiveEcology/fireSense_SpreadFit@lccFix",
+              # "PredictiveEcology/fireSense_SpreadFit@lccFix",
               "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
+              "PredictiveEcology/fireSense_IgnitionPredict@development",
               "PredictiveEcology/canClimateData@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
@@ -53,7 +53,7 @@ inSim <- SpaDES.project::setupProject(
                  reproducible.shapefileRead = "terra::vect",
                  spades.recoveryMode = 1
   ),
-  times = list(start = 2011, end = 2021),
+  times = list(start = 2011, end = 2012),
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
@@ -85,9 +85,6 @@ inSim <- SpaDES.project::setupProject(
       overrideBiomassInFires = FALSE,
       .useCache = c(".inputObjects", "init")
     ),
-    canClimateData = list(
-      projectedClimateYears = 2011:2061
-    ),
     fireSense_SpreadFit = list(
       mutuallyExclusiveCols = list(
         youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
@@ -115,6 +112,11 @@ inSim <- SpaDES.project::setupProject(
     ),
     fireSense_IgnitionFit = list(
       rescalers = c("CMDsm" = 1000)
+    ),
+    fireSense_dataPrepPredict = list(
+      ignitionFuelClassCol ="fuel",
+      spreadFuelClassCol = "fuel",
+      missingLCC = "nf_dryland"
     )
   )
 )
@@ -136,8 +138,8 @@ inSim$climateVariables <- list(
 
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
-saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
-            outputs = FALSE, inputs = FALSE, cache = FALSE)
+# saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
+#             outputs = FALSE, inputs = FALSE, cache = FALSE)
 
 
 
