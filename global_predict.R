@@ -33,12 +33,14 @@ if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
                           token = readRDS("googlemagic.rds"))
 }
 
+
+fittingSim <- SpaDES.core::loadSimList(file.path("outputs", currentName, paste0("inSim_", currentName, ".qs")))
+
 #TODO change the script so that ecoprovinceNum is consistently named in functions
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
   useGit=  TRUE,
-  name = "NEBC",
   paths = list(projectPath = "C:/Ian/Git/AssortedProjects/NEBC",
                modulePath = file.path("modules"),
                cachePath = file.path("cache"),
@@ -52,44 +54,41 @@ inSim <- SpaDES.project::setupProject(
     "PredictiveEcology/Biomass_borealDataPrep@development",
     "PredictiveEcology/Biomass_speciesData@development",
     #climate inputs
-    "PredictiveEcology/canClimateData@development",
+    # "PredictiveEcology/canClimateData@development",
     # fireSense prediction
-    "PredictiveEcology/fireSense_dataPrepPredict@pendingClimateData",
-    "PredictiveEcology/fireSense_SpreadPredict@development",
-    "PredictiveEcology/fireSense_IgnitionPredict@development",
+    "PredictiveEcology/fireSense_dataPrepPredict@development",
+    # "PredictiveEcology/fireSense_SpreadPredict@development",
+    "PredictiveEcology/fireSense_IgnitionPredict@biomassFuel",
+    "PredictiveEcology/fireSense_EscapePredict@development",
     "PredictiveEcology/fireSense@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
                  reproducible.shapefileRead = "terra::vect",
-                 spades.recoveryMode = 1,
-                 parallelly.availableCores.custom = function(){return(6)} #For Windows users
+                 spades.recoveryMode = 1
   ),
   times = list(start = 2011, end = 2051),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   ###objects####
-  sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
-  studyArea = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
-  rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
-  rasterToMatchLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
-  studyAreaLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
-  studyAreaReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyAreaReporting,
-  rasterToMatchReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatchReporting,
-  climateVariablesForFire = list(ignition = "CMDsm",
-                                 spread = "CMDsm"),
-  nonForestedLCCGroups = list(
-    "nf_dryland" = c(50, 100, 40), # shrub, herbaceous, bryoid
-    "nf_wetland" = c(81)), #non-treed wetland.
-  #objects that must be supplied by fitted sim
-  fireSense_IgnitionFitted = readRDS("outputs/Skeena/fireSense_IgnitionFitted.rds"),
-  fireSense_SpreadFitted = readRDS("outputs/Skeena/fireSense_SpreadFitted.rds"),
-  #objects that could be supplied by fitted sim
-  flammableRTM = terra::rast("outputs/Skeena/flammableRTM2011.tif"),
-  landcoverDT = data.table::fread("outputs/Skeena/landcoverDT2011.csv"),
+  sppEquiv = fittingSim$sppEquiv,
+  studyArea = fittingSim$studyArea,
+  studyAreaLarge = fittingSim$studyAreaLarge,
+  studyAreaReporting = fittingSim$studyAreaReporting,
+  rasterToMatch = fittingSim$rasterToMatch,
+  rasterToMatchReporting = fittingSim$rasterToMatchReporting,
+  rasterToMatchLarge = fittingSim$rasterToMatchLarge,
+  climateVariablesForFire = fittingSim$climateVariablesForFire,
+  projectedClimateRasters = fittingSim$projectedClimateRasters,
+  fireSense_IgnitionFitted = fittingSim$fireSense_IgnitionFitted,
+  fireSense_EscapeFitted = fittingSim$fireSense_EscapeFitted,
+  nonForestedLCCGroups = fittingSim$nonForestedLCCGroups,
+  nonForest_timeSinceDisturbance = fittingSim$nonForest_timeSinceDisturbance2011,
+  flammableRTM = fittingSim$flammableRTM2011,
+  landcoverDT = fittingSim$landcoverDT2011,
   ####Params####
   #params last because one of them depends on sppEquiv fuel class names
   params = list(
-    .globals = list(.studyAreaName = currentName,
+    .globals = list(.studyAreaName = paste0(currentName, "_npix_", terra::res(rasterToMatch)[1]),
                     dataYear = 2011,
                     .plots = "png",
                     sppEquivCol = "LandR"),
@@ -104,17 +103,9 @@ inSim <- SpaDES.project::setupProject(
   )
 )
 
-inSim$climateVariables <- list(
-  projected_CMDsm = list(
-    vars = "future_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(future_years = inSim$params$canClimateData$projectedClimateYears)
-  )
-)
+rm(fittingSim)
+gc()
+
 
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
-
-# saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
-#             outputs = FALSE, inputs = FALSE, cache = FALSE)
-
 

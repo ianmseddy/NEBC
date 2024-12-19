@@ -26,7 +26,7 @@ if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
                           token = readRDS("googlemagic.rds"))
 }
 
-#TODO change the script so that ecoprovinceNum is consistently named in functinos
+#TODO change the script so that ecoprovinceNum is consistently named in functions
 inSim <- SpaDES.project::setupProject(
   updateRprofile = TRUE,
   Restart = TRUE,
@@ -39,21 +39,23 @@ inSim <- SpaDES.project::setupProject(
                outputPath = file.path("outputs", currentName)
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
-              "PredictiveEcology/fireSense_dataPrepPredict",
+              "PredictiveEcology/canClimateData@development",
               "PredictiveEcology/Biomass_borealDataPrep@development",
-              "PredictiveEcology/Biomass_core@development",
+              # "PredictiveEcology/Biomass_core@development",
+              "PredictiveEcology/fireSense@development",
               "PredictiveEcology/Biomass_speciesData@development",
               # "PredictiveEcology/fireSense_SpreadFit@lccFix",
+              "PredictiveEcology/fireSense_dataPrepPredict@development",
               "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
-              "PredictiveEcology/fireSense_IgnitionPredict@development",
-              "PredictiveEcology/canClimateData@development"
+              "PredictiveEcology/fireSense_EscapeFit@development"
+              # "PredictiveEcology/fireSense_IgnitionPredict@biomassFuel"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
                  reproducible.shapefileRead = "terra::vect",
                  spades.recoveryMode = 1
   ),
-  times = list(start = 2011, end = 2012),
+  times = list(start = 2011, end = 2011),
   climateVariablesForFire = list(ignition = "CMDsm",
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
@@ -127,6 +129,11 @@ inSim$climateVariables <- list(
     vars = "historical_CMD_sm",
     fun = quote(calcAsIs),
     .dots = list(historical_years = 1991:2022)
+  ),
+  projected_CMDsm = list(
+    vars = "future_CMD_sm",
+    fun = quote(calcAsIs),
+    .dots = list(future_years = 2011:2061)
   )
 )
 
@@ -138,8 +145,7 @@ inSim$climateVariables <- list(
 
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
-# saveSimList(outSim, paste0("outputs/outSim_", currentName, ".rds"),
-#             outputs = FALSE, inputs = FALSE, cache = FALSE)
+saveSimList(outSim, file.path(outputPath(outSim), paste0("inSim_", currentName, ".qs")), inputs = FALSE)
 
 
 
