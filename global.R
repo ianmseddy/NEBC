@@ -17,14 +17,14 @@ if (currentName == "Taiga") {
   snll_thresh = 1200
 }
 
-if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
-  #this must be run in advance at some point -
-  # I don't know how to control the token expiry - gargle documentation is crappy
-  # mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
-  # saveRDS(mytoken, "googlemagic.rds")
-  googledrive::drive_auth(email = "ianmseddy@gmail.com",
-                          token = readRDS("googlemagic.rds"))
-}
+# if (!Sys.info()[["nodename"]] == "W-VIC-A127551") {
+#   #this must be run in advance at some point -
+#   # I don't know how to control the token expiry - gargle documentation is crappy
+#   # mytoken <- gargle::gargle2.0_token(email = "ianmseddy@gmail.com")
+#   # saveRDS(mytoken, "googlemagic.rds")
+#   googledrive::drive_auth(email = "ianmseddy@gmail.com",
+#                           token = readRDS("googlemagic.rds"))
+# }
 
 #TODO change the script so that ecoprovinceNum is consistently named in functions
 inSim <- SpaDES.project::setupProject(
@@ -39,19 +39,18 @@ inSim <- SpaDES.project::setupProject(
                outputPath = file.path("outputs", currentName)
   ),
   modules = c("PredictiveEcology/fireSense_dataPrepFit@lccFix",
-              "PredictiveEcology/canClimateData@development",
+              # "PredictiveEcology/canClimateData@improveCache",
               "PredictiveEcology/Biomass_borealDataPrep@development",
               # "PredictiveEcology/Biomass_core@development",
-              "PredictiveEcology/fireSense@development",
+              # "PredictiveEcology/fireSense@development",
               "PredictiveEcology/Biomass_speciesData@development",
               # "PredictiveEcology/fireSense_SpreadFit@lccFix",
-              "PredictiveEcology/fireSense_dataPrepPredict@development",
               "PredictiveEcology/fireSense_IgnitionFit@biomassFuel",
               "PredictiveEcology/fireSense_EscapeFit@development"
-              # "PredictiveEcology/fireSense_IgnitionPredict@biomassFuel"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
+                 gargle_oauth_client_type = "web", #I think?
                  reproducible.shapefileRead = "terra::vect",
                  spades.recoveryMode = 1
   ),
@@ -60,6 +59,9 @@ inSim <- SpaDES.project::setupProject(
                                  spread = "CMDsm"),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   sppEquiv = makeSppEquiv(ecoprovinceNum = ecoprovince),
+  historicalClimateRasters = list(
+    "CMDsm" = terra::rast("outputs/Skeena/climate/CMDsm_historical_Skeena.tif")
+    ),
   #update mutuallyExlcusive Cols
   studyArea = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
   rasterToMatch = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatch,
@@ -70,13 +72,6 @@ inSim <- SpaDES.project::setupProject(
   studyAreaPSP = setupSAandRTM(ecoprovinceNum = studyAreaPSPprov)$studyArea |>
     terra::aggregate() |>
     terra::buffer(width = 10000),
-  nonForestedLCCGroups = list(
-    "nf_dryland" = c(50, 100, 40), # shrub, herbaceous, bryoid
-    "nf_wetland" = c(81)), #non-treed wetland.
-  fireSense_ignitionFormula = paste0("ignitionsNoGT1 ~ (1|yearChar) + youngAge:CMDsm + nf_wetland:CMDsm",
-                                     " + nf_dryland:CMDsm + ", paste0(unique(sppEquiv$fuel), ":CMDsm",
-                                                                      collapse = " + ")),
-  #params last because one of them depends on sppEquiv fuel class names
   params = list(
     .globals = list(.studyAreaName = currentName,
                     dataYear = 2011,
@@ -87,6 +82,7 @@ inSim <- SpaDES.project::setupProject(
       overrideBiomassInFires = FALSE,
       .useCache = c(".inputObjects", "init")
     ),
+    canClimateData = list(".useCache" = c(".inputObjects", "init")),
     fireSense_SpreadFit = list(
       mutuallyExclusiveCols = list(
         youngAge = c("nf", unique(makeSppEquiv(ecoprovinceNum = ecoprovince)$fuel))
@@ -103,50 +99,45 @@ inSim <- SpaDES.project::setupProject(
         sizeGbEachProcess = 1),
       trace = 1,
       mode = c("fit", "visualize"),
-      # mode = c("debug"),
       SNLL_FS_thresh = snll_thresh,
       doObjFunAssertions = FALSE
     ),
-    fireSense_dataPrepFit = list(
-      spreadFuelClassCol = "fuel",
-      ignitionFuelClassCol = "fuel",
-      missingLCCgroup = c("nf_dryland")
-    ),
     fireSense_IgnitionFit = list(
       rescalers = c("CMDsm" = 1000)
-    ),
-    fireSense_dataPrepPredict = list(
-      ignitionFuelClassCol ="fuel",
-      spreadFuelClassCol = "fuel",
-      missingLCC = "nf_dryland"
     )
   )
 )
 
+
+#fireSenseTesting
+
 #add this after because of the quoted functions
-inSim$climateVariables <- list(
-  historical_CMDsm = list(
-    vars = "historical_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(historical_years = 1991:2022)
-  ),
-  projected_CMDsm = list(
-    vars = "future_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(future_years = 2011:2061)
-  )
-)
+# inSim$climateVariables <- list(
+#   historical_CMDsm = list(
+#     vars = "historical_CMD_sm",
+#     fun = quote(calcAsIs),
+#     .dots = list(historical_years = 1991:2022)
+#   ),
+#   projected_CMDsm = list(
+#     vars = "future_CMD_sm",
+#     fun = quote(calcAsIs),
+#     .dots = list(future_years = 2011:2061)
+#   )
+# )
 
 
+googledrive::drive_auth(email = "ianmseddy@gmail.com", cache = "../../google_drive_cache/")
 #known bugs/undesirable behavior
 #1 spreadFit dumps a bunch of figs in the project directory instead of outputs
 #2 canClimateData occasionally fails, rather mysteriously. Unclear if
 #3 Google Auth can be irritating when running via Bash
 
-outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
+names(inSim$historicalClimateRasters$CMDsm) <- paste0("year", 1991:2022)
+pkgload::load_all("../fireSenseUtils")
+outSim <- SpaDES.core::simInitAndSpades2(inSim)
 
-saveSimList(outSim, file.path(outputPath(outSim), paste0("inSim_", currentName, ".qs")), inputs = FALSE)
-
+# saveSimList(outSim, file.path(outputPath(outSim), paste0("inSim_", currentName, ".qs")), inputs = FALSE)
+#
 
 
 # Taiga
