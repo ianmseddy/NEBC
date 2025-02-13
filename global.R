@@ -69,9 +69,6 @@ inSim <- SpaDES.project::setupProject(
   studyAreaLarge = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyArea,
   studyAreaReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$studyAreaReporting,
   rasterToMatchReporting = setupSAandRTM(ecoprovinceNum = ecoprovince)$rasterToMatchReporting,
-  studyAreaPSP = setupSAandRTM(ecoprovinceNum = studyAreaPSPprov)$studyArea |>
-    terra::aggregate() |>
-    terra::buffer(width = 10000),
   params = list(
     .globals = list(.studyAreaName = currentName,
                     dataYear = 2011,

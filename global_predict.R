@@ -95,6 +95,9 @@ inSim <- SpaDES.project::setupProject(
     canClimateData = list(
       projectedClimateYears = 2011:2061
     ),
+    Biomass_core = list(
+      .useCache = FALSE
+    ),
     fireSense_dataPrepPredict = list(
       ignitionFuelClassCol ="fuel",
       spreadFuelClassCol = "fuel",
@@ -107,5 +110,6 @@ rm(fittingSim)
 gc()
 
 
+devtools::load_all("../fireSenseUtils")
 outSim <- do.call(what = SpaDES.core::simInitAndSpades, args = inSim)
 
