@@ -7,27 +7,26 @@ if (tryCatch(packageVersion("SpaDES.project") < "0.1.1", error = function(x) TRU
 FRU <- 60
 
 inSim <- SpaDES.project::setupProject(
-  updateRprofile = TRUE,
-  Restart = TRUE,
   require = "PredictiveEcology/scfmutils@development",
+  packages = c("usethis", "googledrive", "httr2"),
   useGit=  TRUE,
-  paths = list(projectPath = "C:/Ian/Git/AssortedProjects/NEBC",
+  paths = list(projectPath = "NEBC",
                modulePath = file.path("modules"),
                cachePath = file.path("cache"),
                scratchPath = tempdir(),
                inputPath = file.path("inputs"),
                outputPath = file.path("outputs", paste0("FRU", FRU))
   ),
-  modules = c("PredictiveEcology/fireSense_dataPrepFit@devmerge",
-              "PredictiveEcology/canClimateData@development",
-              "PredictiveEcology/Biomass_borealDataPrep@development",
+  modules = c("PredictiveEcology/fireSense_dataPrepFit@WIP-flammableMap",
+              "PredictiveEcology/canClimateData@development"
+              # "PredictiveEcology/Biomass_borealDataPrep@development"
               # "PredictiveEcology/Biomass_core@development",
               # "PredictiveEcology/fireSense@development",
-              "PredictiveEcology/Biomass_speciesData@development",
+              # "PredictiveEcology/Biomass_speciesData@development",
               #,
               # "PredictiveEcology/fireSense_SpreadFit@lccFix",
-              "PredictiveEcology/fireSense_IgnitionFit@development",
-              "PredictiveEcology/fireSense_EscapeFit@development"
+              # "PredictiveEcology/fireSense_IgnitionFit@development",
+              # "PredictiveEcology/fireSense_EscapeFit@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
