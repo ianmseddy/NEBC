@@ -4,11 +4,11 @@ if (tryCatch(packageVersion("SpaDES.project") < "0.1.1", error = function(x) TRU
   install.packages(c("SpaDES.project", "Require"), repos = repos)
 }
 
-FRU <- 60
+FRU <- 30
 
 inSim <- SpaDES.project::setupProject(
   require = "PredictiveEcology/scfmutils@development",
-  packages = c("usethis", "googledrive", "httr2"),
+  packages = c("usethis", "googledrive", "httr2", "RCurl", "XML"),
   useGit=  TRUE,
   paths = list(projectPath = "NEBC",
                modulePath = file.path("modules"),
@@ -17,20 +17,20 @@ inSim <- SpaDES.project::setupProject(
                inputPath = file.path("inputs"),
                outputPath = file.path("outputs", paste0("FRU", FRU))
   ),
-  modules = c("PredictiveEcology/fireSense_dataPrepFit@WIP-flammableMap",
-              "PredictiveEcology/canClimateData@development"
-              # "PredictiveEcology/Biomass_borealDataPrep@development"
+  modules = c( "PredictiveEcology/canClimateData@development",
+               "PredictiveEcology/fireSense_dataPrepFit@development",
+               "PredictiveEcology/Biomass_speciesData@development",
+               "PredictiveEcology/Biomass_borealDataPrep@development",
               # "PredictiveEcology/Biomass_core@development",
               # "PredictiveEcology/fireSense@development",
-              # "PredictiveEcology/Biomass_speciesData@development",
-              #,
               # "PredictiveEcology/fireSense_SpreadFit@lccFix",
-              # "PredictiveEcology/fireSense_IgnitionFit@development",
+              "PredictiveEcology/fireSense_IgnitionFit@development"
               # "PredictiveEcology/fireSense_EscapeFit@development"
   ),
   options = list(spades.allowInitDuringSimInit = TRUE,
                  spades.moduleCodeChecks = FALSE,
                  useCache = TRUE,
+                 reproducible.inputPaths = "~/data",
                  gargle_oauth_email = "ianmseddy@gmail.com",
                  gargle_oauth_cache = "~/google_drive_cache",
                  gargle_oauth_client_type = "web", #I think?
@@ -38,20 +38,23 @@ inSim <- SpaDES.project::setupProject(
                  spades.recoveryMode = 1
   ),
   times = list(start = 2011, end = 2011),
-  climateVariablesForFire = list(ignition = c("CMDsm", "CMDsp"),
-                                 spread = c("CMDsm", "CMDsp")),
+  loadOrder = unlist(modules), #load order must be passed or BBDP will be sourced prior to fsDPF.
+  #also canClimateData must come before fireSense
+  climateVariablesForFire = list(ignition = c("CMDsp"),
+                                 spread = c("CMDsp")),
   functions = "ianmseddy/NEBC@main/R/studyAreaFuns.R",
   #update mutuallyExlcusive Cols
   studyArea = {
     sa <- scfmutils::prepInputsFireRegimePolys(destinationPath = "inputs",
                                                type = "FRU")
-    sa <- sa[sa$PolyID == FRU,]
+    sa <- sa[sa$FRU == FRU,]
     sa <- terra::vect(sa)
-    sa <- terra::buffer(sa, 5000)
+    sa <- terra::buffer(sa, 3000)
+    sa <- terra::fillHoles(sa)
   },
   rasterToMatch = {
     rtm <- terra::rast(sa, res = c(250, 250))
-    rtm[] <- sample(1:3, terra::ncell(rtm), replace = TRUE)
+    rtm[] <- 1
     rtm <- reproducible::postProcess(rtm, maskTo = sa)
   },
   rasterToMatchLarge = rasterToMatch,
@@ -60,8 +63,10 @@ inSim <- SpaDES.project::setupProject(
     spp <- LandR::speciesInStudyArea(studyArea = studyArea,
                                      dPath = "inputs",)
     sppEquiv <- LandR::sppEquivalencies_CA[KNN %in% spp$speciesList,]
+    sppEquiv <- sppEquiv[LANDIS_traits != "",]
     sppEquiv <- sppEquiv[grep(pattern = "Spp", x = sppEquiv$KNN, invert = TRUE),]
   },
+  objectSynonyms = list("rstLCC2011" = "rstLCC"),
   params = list(
     .globals = list(.studyAreaName = paste0("FRU", FRU),
                     dataYear = 2011,
@@ -70,23 +75,15 @@ inSim <- SpaDES.project::setupProject(
     Biomass_borealDataPrep = list(
       overrideAgeInFires = FALSE,
       overrideBiomassInFires = FALSE,
-      .useCache = c(".inputObjects", "init")
+      .useCache = c(".inputObjects")
     ),
-    canClimateData = list(".useCache" = c(".inputObjects", "init")),
-    fireSense_IgnitionFit = list(
-      rescalers = c("CMDsm" = 1000,
-                    "CMDsp" = 1000)
-    )
+    fireSense_dataPrepFit = list(".studyAreaName" = paste0("FRU", FRU)),
+    canClimateData = list(".useCache" = c(".inputObjects", "init"))
   )
 )
 
 
 inSim$climateVariables <- list(
-  historical_CMDsm = list(
-    vars = "historical_CMD_sm",
-    fun = quote(calcAsIs),
-    .dots = list(historical_years = 1991:2022)
-  ),
   historical_CMDsp = list(
     vars = "historical_CMD_sp",
     fun = quote(calcAsIs),
@@ -94,11 +91,6 @@ inSim$climateVariables <- list(
   )
 )
 
-#known bugs/undesirable behavior
-#1 spreadFit dumps a bunch of figs in the project directory instead of outputs
-#2 canClimateData occasionally fails, rather mysteriously. Unclear if
-#3 Google Auth can be irritating when running via Bash
-
-
+devtools::load_all("../fireSenseUtils")
 outSim <- SpaDES.core::simInitAndSpades2(inSim)
 
