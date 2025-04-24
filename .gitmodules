@@ -40,3 +40,9 @@
 [submodule "modules/fireSense_EscapePredict"]
 	path = modules/fireSense_EscapePredict
 	url = https://github.com/PredictiveEcology/fireSense_EscapePredict
+[submodule "modules/fireSense_ignitionPredict"]
+	path = modules/fireSense_ignitionPredict
+	url = https://github.com/PredictiveEcology/fireSense_ignitionPredict
+[submodule "modules/fireSense_escapePredict"]
+	path = modules/fireSense_escapePredict
+	url = https://github.com/PredictiveEcology/fireSense_escapePredict
